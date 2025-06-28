@@ -10,5 +10,8 @@
       every: '1d'
       class: Scheduled::FlushMetricsJob
     cancel_hanging_builds_job:
-      every: '1h'
+      every: '1m'
       class: Scheduled::CancelHangingBuildsJob
+    check_cluster_status_job:
+      every: '30s'
+      class: Scheduled::CheckClusterStatusJob
