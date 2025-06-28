@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_MULTIPLE_DATABASES=canine_development,canine_test
+    ports:
+      - "5691:5432" #changed the port from 5432 to 5689 to avoid conflicts
+    volumes:
+      - "postgres:/var/lib/postgresql/data"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "5692:6379" # changed the port from 6379 to 5690 to avoid conflicts
+
+  web:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    volumes:
+      - ../:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    stdin_open: true
+    tty: true
+    ports:
+      - "3078:3078"
+      - "3200:3200"
+    environment:
+      - DATABASE_URL=postgres://postgres:password@postgres:5432
+      - REDIS_URL=redis://redis:6379
+      - PORT=3078
+      - CANINE_USERNAME=admin
+      - CANINE_PASSWORD=adminajai123
+      - LOCAL_MODE=true
+      - APP_HOST=http://localhost:3078
+    depends_on:
+      - postgres
+      - redis
+
+  sidekiq:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    command: bundle exec sidekiq
+    volumes:
+      - ../:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DATABASE_URL=postgres://postgres:password@postgres:5432
+      - REDIS_URL=redis://redis:6379
+      - RAILS_ENV=development
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  postgres: 

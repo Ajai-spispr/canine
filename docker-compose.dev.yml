@@ -1,0 +1,94 @@
+version: "3.2"
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_MULTIPLE_DATABASES=canine_development,canine_test
+    ports:
+      - "5691:5432" #changed the port from 5432 to 5689 to avoid conflicts
+    volumes:
+      - "postgres:/var/lib/postgresql/data"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "5692:6379" # changed the port from 6379 to 5690 to avoid conflicts
+
+  web:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    volumes:
+      - ../:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    stdin_open: true
+    tty: true
+    ports:
+      - "8034:8034"
+      - "3200:3200"
+    environment:
+      # Database Configuration (use internal ports for container communication)
+      - DATABASE_URL=postgres://postgres:password@postgres:5432/canine_development
+      - REDIS_URL=redis://redis:6379
+      
+      # Application Configuration
+      - PORT=8034
+      - APP_HOST=http://localhost:8034
+      - RAILS_ENV=development
+      - LOCAL_MODE=true
+      
+      # Authentication
+      - CANINE_USERNAME=admin
+      - CANINE_PASSWORD=secretpassword123
+      
+      # Rails Configuration
+      - SECRET_KEY_BASE=a38fcb39d60f9d146d2a0053a25024b9
+      
+      # Development Settings
+      - RAILS_LOG_LEVEL=debug
+      - RAILS_MAX_THREADS=5
+      
+      # Asset compilation
+      - RAILS_SERVE_STATIC_FILES=true
+    depends_on:
+      - postgres
+      - redis
+
+  sidekiq:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    command: bundle exec sidekiq
+    volumes:
+      - ../:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Database Configuration (use internal ports for container communication)
+      - DATABASE_URL=postgres://postgres:password@postgres:5432/canine_development
+      - REDIS_URL=redis://redis:6379
+      
+      # Application Configuration
+      - RAILS_ENV=development
+      - LOCAL_MODE=true
+      
+      # Authentication
+      - CANINE_USERNAME=admin
+      - CANINE_PASSWORD=secretpassword123
+      
+      # Rails Configuration
+      - SECRET_KEY_BASE=a38fcb39d60f9d146d2a0053a25024b9
+      
+      # Development Settings
+      - RAILS_LOG_LEVEL=debug
+      - RAILS_MAX_THREADS=5
+      
+      # Asset compilation
+      - RAILS_SERVE_STATIC_FILES=true
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  postgres:
